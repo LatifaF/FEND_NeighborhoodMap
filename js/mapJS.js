@@ -47,40 +47,44 @@ function initMap() {
         mapTypeControl: false
     });
 
+    google.maps.event.addDomListener(window, 'resize', function(){
+        map.setCenter({lat:24.713488, lng:46.675339});
+    });
+    infowindow = new google.maps.InfoWindow();
     getLocation();
 
 }
 
 
-
+// get all location and there info from foursquar api
 function getLocation()
 {
-    var Places = new google.maps.places.PlacesService(map);
-    Places.nearbySearch({
-      location: {lat:24.713488, lng:46.675339},
-      radius: 40000,
-      type: ['restaurant']
-    }, callback);
-
-    function callback(results, status) {
-        if (status === google.maps.places.PlacesServiceStatus.OK)
-          locations = results;
-        setMarkers(locations);
-        ko.applyBindings(new PlaceViewModel());
-
-    }
-
+    $.ajax({
+            url: 'https://api.foursquare.com/v2/venues/explore?ll=24.713488,46.675339&radius=100000&section=food&client_id=5NWIINLL44LBT2TXPRLYBBTRNA1QKE132ADXDLBI04FLEBIV&client_secret=HX3DQAETGBZKOTA3ZNDEEMRTXPXQG4JDT4EWFXVWBIRJXTOQ&v=20130815',
+            dataType: "json",
+            success: function (data) {
+                locations = data.response.groups[0].items;
+                setMarkers(locations);
+                ko.applyBindings(new PlaceViewModel());
+            },
+            error: function (e) {
+                alert('Foursquare data is unavailable. Please try refreshing later.');
+            }
+        });
 }
 
 function setMarkers(arrLocation)
 {
-    infowindow = new google.maps.InfoWindow();
+
     bound = new google.maps.LatLngBounds();
     for (var i = 0 ;i < arrLocation.length ; i++) {
         var marker = new google.maps.Marker({
-        position: arrLocation[i].geometry.location,
+        position: {
+               "lat" : arrLocation[i].venue.location.lat,
+               "lng" : arrLocation[i].venue.location.lng
+            },
         map: map,
-        title: arrLocation[i].name,
+        title: arrLocation[i].venue.name,
         animation: google.maps.Animation.DROP,
         id : i
         });
@@ -92,7 +96,9 @@ function setMarkers(arrLocation)
     }
     map.fitBounds(bound);
 
-    function popwindow(marker, infowindow, placeDetails)
+
+}
+function popwindow(marker, infowindow, placeDetails)
         {
             for (var i = 0; i<markers.length ; i++) {
                 markers[i].setAnimation();
@@ -105,15 +111,17 @@ function setMarkers(arrLocation)
             infowindow.setMarker(null);
           });
 
-        infowindow.setContent('<div>'+marker.title+'</div><div>Raiting: '+((placeDetails.rating != null) ? placeDetails.rating : 'there is no rating for this location')+'</div><div>Photo: <img src="'+placeDetails.photos[0].getUrl({maxWidth:200})+'&key=AIzaSyBeMiDVUV0I5J7UTRbEJnGYd9SsGNR2LZ8"></div>');
+        infowindow.setContent('<div>'+marker.title+'</div><div>Raiting: '+
+            ((placeDetails.venue.rating != null) ? placeDetails.venue.rating : 'there is no rating for this location')+
+            '</div><div>website: '+((placeDetails.venue.url != null) ? '<a href="'+placeDetails.venue.url+'">click here</a>': '<p>no website for this place.') +
+            '</div><div>Phone number: '+((placeDetails.venue.contact.phone != null) ? '<p>'+placeDetails.venue.contact.phone+'</p>': '<p>no phone number for this place.')+'</div>');
         infowindow.open(map,marker);
         }
-}
 
 var PlaceViewModel = function(){
     var self = this;
 
-
+    // this is the function for the list search..
     self.query = ko.observable('');
     self.locationsAll = ko.observableArray(locations);
     self.locationsResult = ko.observableArray();
@@ -125,12 +133,27 @@ var PlaceViewModel = function(){
         var search = self.query().toLowerCase();
         for(var i=0 ; i < self.locationsAll().length; i++)
         {   place = self.locationsAll()[i];
-            if(place.name.toLowerCase().indexOf(search) >= 0)
+            if(place.venue.name.toLowerCase().indexOf(search) >= 0)
                 self.locationsResult.push(place);
 
+        }
+        if($(window).width() < 550)
+        {
+            if(search != '')
+                $('.searchList').show();
+            else
+                $('.searchList').hide();
         }
         setMarkers(self.locationsResult());
         return self.locationsResult();
     });
+
+    // for list clicking
+    self.clickPlace = function(place)
+    {
+        var index = self.locationsAll().map(function(o) { return o.venue.name; }).indexOf(place.venue.name);
+        markers[index].setMap(map);
+        google.maps.event.trigger(markers[index], 'click');
+    };
 
 };
