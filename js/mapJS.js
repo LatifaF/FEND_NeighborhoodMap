@@ -7,7 +7,6 @@ var infowindow ;
 var bound;
 
 
-
 function initMap() {
     var style = [
           {
