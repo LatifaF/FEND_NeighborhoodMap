@@ -52,7 +52,7 @@ function initMap() {
 
    // get all location and there info from foursquar api
     $.ajax({
-            url: 'https://api.foursquare.com/v2/venues/explore?ll=24.713488,46.675339&radius=100000&section=food&client_id=5NWIINLL44LBT2TXPRLYBBTRNA1QKE132ADXDLBI04FLEBIV&client_secret=HX3DQAETGBZKOTA3ZNDEEMRTXPXQG4JDT4EWFXVWBIRJXTOQ&v=20130815',
+            url: 'http://api.foursquare.com/v2/venues/explore?ll=24.713488,46.675339&radius=100000&section=food&client_id=5NWIINLL44LBT2TXPRLYBBTRNA1QKE132ADXDLBI04FLEBIV&client_secret=HX3DQAETGBZKOTA3ZNDEEMRTXPXQG4JDT4EWFXVWBIRJXTOQ&v=20130815',
             dataType: "json",
             success: function (data) {
                 locations = data.response.groups[0].items;
