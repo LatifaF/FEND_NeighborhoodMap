@@ -1,13 +1,12 @@
 
 
 var map;
-var markers =[];
 var locations =[];
-var infowindow ;
 var bound;
 
 
 function initMap() {
+    // style for the map
     var style = [
           {
             "featureType": "administrative",
@@ -46,113 +45,121 @@ function initMap() {
         mapTypeControl: false
     });
 
+    // for resbonsivness
     google.maps.event.addDomListener(window, 'resize', function(){
         map.setCenter({lat:24.713488, lng:46.675339});
     });
-    infowindow = new google.maps.InfoWindow();
-    getLocation();
 
-}
-
-
-// get all location and there info from foursquar api
-function getLocation()
-{
+   // get all location and there info from foursquar api
     $.ajax({
             url: 'https://api.foursquare.com/v2/venues/explore?ll=24.713488,46.675339&radius=100000&section=food&client_id=5NWIINLL44LBT2TXPRLYBBTRNA1QKE132ADXDLBI04FLEBIV&client_secret=HX3DQAETGBZKOTA3ZNDEEMRTXPXQG4JDT4EWFXVWBIRJXTOQ&v=20130815',
             dataType: "json",
             success: function (data) {
                 locations = data.response.groups[0].items;
-                setMarkers(locations);
+                // setMarkers(locations);
                 ko.applyBindings(new PlaceViewModel());
             },
             error: function (e) {
                 alert('Foursquare data is unavailable. Please try refreshing later.');
             }
         });
+
 }
 
-function setMarkers(arrLocation)
-{
+var PlaceViewModel = function(){
+    // save this of the modelview
+    var self = this;
+    // get all location int abservable array
+    self.locationsAll = ko.observableArray(locations);
 
+    var infowindow = new google.maps.InfoWindow();
     bound = new google.maps.LatLngBounds();
-    for (var i = 0 ;i < arrLocation.length ; i++) {
+
+    // add marker for all location with needed data
+    for (var i = 0 ;i < self.locationsAll().length ; i++) {
+        var locationData = self.locationsAll()[i];
         var marker = new google.maps.Marker({
         position: {
-               "lat" : arrLocation[i].venue.location.lat,
-               "lng" : arrLocation[i].venue.location.lng
+               "lat" : self.locationsAll()[i].venue.location.lat,
+               "lng" : self.locationsAll()[i].venue.location.lng
             },
         map: map,
-        title: arrLocation[i].venue.name,
+        title: self.locationsAll()[i].venue.name,
         animation: google.maps.Animation.DROP,
         id : i
         });
-    markers.push(marker);
-    bound.extend(marker.position);
-    marker.addListener('click', function() {
-        popwindow(this, infowindow,arrLocation[this.id]);
-        });
-    }
-    map.fitBounds(bound);
+        self.locationsAll()[i].marker =marker;
+        // make sure that the marker showing in map boundry for the map to set it next
+        bound.extend(self.locationsAll()[i].marker.position);
 
+        // add listener for the marker
+        (self.locationsAll()[i].marker).addListener('click', function() {
+            var place ={};
 
-}
-function popwindow(marker, infowindow, placeDetails)
-        {
-            for (var i = 0; i<markers.length ; i++) {
-                markers[i].setAnimation();
+            //searching for marker information
+            for (var k = 0; k<self.locationsAll().length ; k++) {
+                console.log(self.locationsAll()[k].venue.name);
+                if(self.locationsAll()[k].venue.name.indexOf(this.title) >= 0)
+                    place = self.locationsAll()[k];
+                self.locationsAll()[k].marker.setAnimation();
             }
-            marker.setAnimation(google.maps.Animation.BOUNCE);
-          if(infowindow.marker != marker)
-            infowindow.marker = marker;
+
+            if(infowindow.marker != this)
+                infowindow.marker = this;
+
+            // set the animation for the clicked marker.
+            this.setAnimation(google.maps.Animation.BOUNCE);
+            // make the clicked marker in the center of the map
+            map.setCenter(this.position);
+
+            // listener for closing the infowindow
           infowindow.addListener('closeclick',function(){
-            // marker.setAnimation();
+            infowindow.marker.setAnimation();
             infowindow.setMarker(null);
           });
+          // set the content of the info window
+        if(place !== null)
+            infowindow.setContent('<div>'+this.title+'</div><div>Raiting: '+
+            ((place.venue.rating !== null) ? place.venue.rating : 'there is no rating for this location')+
+            '</div><div>website: '+((place.venue.url !== null) ? '<a href="'+place.venue.url+'">click here</a>': '<p>no website for this place.') +
+            '</div><div>Phone number: '+((place.venue.contact.phone !== null) ? '<p>'+place.venue.contact.phone+'</p>': '<p>no phone number for this place.')+'</div>');
+        else infowindow.setContent("no content available");
 
-        infowindow.setContent('<div>'+marker.title+'</div><div>Raiting: '+
-            ((placeDetails.venue.rating != null) ? placeDetails.venue.rating : 'there is no rating for this location')+
-            '</div><div>website: '+((placeDetails.venue.url != null) ? '<a href="'+placeDetails.venue.url+'">click here</a>': '<p>no website for this place.') +
-            '</div><div>Phone number: '+((placeDetails.venue.contact.phone != null) ? '<p>'+placeDetails.venue.contact.phone+'</p>': '<p>no phone number for this place.')+'</div>');
-        infowindow.open(map,marker);
-        }
+        infowindow.open(map,this);
+        });
 
-var PlaceViewModel = function(){
-    var self = this;
+    }
+
+    map.fitBounds(bound);
 
     // this is the function for the list search..
     self.query = ko.observable('');
-    self.locationsAll = ko.observableArray(locations);
     self.locationsResult = ko.observableArray();
     self.search = ko.computed(function () {
-        for (var i = 0; i<markers.length ; i++) {
-                markers[i].setMap();
-            }
         self.locationsResult = ko.observableArray([]);
         var search = self.query().toLowerCase();
-        for(var i=0 ; i < self.locationsAll().length; i++)
-        {   place = self.locationsAll()[i];
+        for(var j=0 ; j < self.locationsAll().length; j++)
+        {   place = self.locationsAll()[j];
             if(place.venue.name.toLowerCase().indexOf(search) >= 0)
-                self.locationsResult.push(place);
-
+                {place.marker.setMap(map);
+                self.locationsResult.push(place);}
+            else
+                place.marker.setMap();
         }
         if($(window).width() < 550)
         {
-            if(search != '')
+            if(search !== '')
                 $('.searchList').show();
             else
                 $('.searchList').hide();
         }
-        setMarkers(self.locationsResult());
         return self.locationsResult();
     });
 
     // for list clicking
     self.clickPlace = function(place)
     {
-        var index = self.locationsAll().map(function(o) { return o.venue.name; }).indexOf(place.venue.name);
-        markers[index].setMap(map);
-        google.maps.event.trigger(markers[index], 'click');
+        google.maps.event.trigger(place.marker, 'click');
     };
 
 };
