@@ -66,6 +66,7 @@ function initMap() {
 
 }
 
+
 var PlaceViewModel = function(){
     // save this of the modelview
     var self = this;
@@ -115,14 +116,13 @@ var PlaceViewModel = function(){
             // listener for closing the infowindow
           infowindow.addListener('closeclick',function(){
             infowindow.marker.setAnimation();
-            infowindow.setMarker(null);
           });
           // set the content of the info window
         if(place !== null)
             infowindow.setContent('<div>'+this.title+'</div><div>Raiting: '+
             ((place.venue.rating !== null) ? place.venue.rating : 'there is no rating for this location')+
-            '</div><div>website: '+((place.venue.url !== null) ? '<a href="'+place.venue.url+'">click here</a>': '<p>no website for this place.') +
-            '</div><div>Phone number: '+((place.venue.contact.phone !== null) ? '<p>'+place.venue.contact.phone+'</p>': '<p>no phone number for this place.')+'</div>');
+            '</div><div>website: '+((place.venue.url !== null && place.venue.url !== undefined) ? '<a href="'+place.venue.url+'">click here</a>': '<p>no website for this place.') +
+            '</div><div>Phone number: '+((place.venue.contact.phone !== null && place.venue.contact.phone !== undefined) ? '<p>'+place.venue.contact.phone+'</p>': '<p>no phone number for this place.')+'</div>');
         else infowindow.setContent("no content available");
 
         infowindow.open(map,this);
@@ -141,10 +141,10 @@ var PlaceViewModel = function(){
         for(var j=0 ; j < self.locationsAll().length; j++)
         {   place = self.locationsAll()[j];
             if(place.venue.name.toLowerCase().indexOf(search) >= 0)
-                {place.marker.setMap(map);
+                {place.marker.setVisible(true);
                 self.locationsResult.push(place);}
             else
-                place.marker.setMap();
+                place.marker.setVisible(false);
         }
         if($(window).width() < 550)
         {
@@ -163,3 +163,8 @@ var PlaceViewModel = function(){
     };
 
 };
+
+function ErrorHandlingFunction()
+{
+    alert('google map data is unavailable. Please try refreshing later.');
+}
