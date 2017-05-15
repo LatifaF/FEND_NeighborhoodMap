@@ -10,6 +10,6 @@ the data retrive using foursqure api
 
 download this reposetry and simply open the index.html at your browser.
 
-
+or you can run it by clicking here => https://latifaf.github.io/FEND_NeighborhoodMap/
 
 thank you for reading :)
